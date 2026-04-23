@@ -1,0 +1,4 @@
+app
+.git
+Dockerfile
+docker-compose.yaml
