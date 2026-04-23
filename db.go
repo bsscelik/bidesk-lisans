@@ -4,12 +4,25 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"sync"
 	"time"
 
 	_ "github.com/lib/pq"
 )
 
-var db *sql.DB
+var (
+	dbInstance *sql.DB
+	once       sync.Once
+)
+
+func GetDB() *sql.DB {
+	if dbInstance == nil {
+		once.Do(func() {
+			InitDB()
+		})
+	}
+	return dbInstance
+}
 
 func InitDB() {
 	connStr := fmt.Sprintf(
@@ -25,9 +38,9 @@ func InitDB() {
 
 	// 🔥 retry loop
 	for i := 0; i < 10; i++ {
-		db, err = sql.Open("postgres", connStr)
+		dbInstance, err = sql.Open("postgres", connStr)
 		if err == nil {
-			err = db.Ping()
+			err = dbInstance.Ping()
 			if err == nil {
 				break
 			}
@@ -41,10 +54,10 @@ func InitDB() {
 		panic("DB baglantisi kurulamadı: " + err.Error())
 	}
 
-	createTable()
+	createTable(dbInstance)
 }
 
-func createTable() {
+func createTable(db *sql.DB) {
 	queries := []string{
 		`CREATE TABLE IF NOT EXISTS licenses (
 			code TEXT PRIMARY KEY,

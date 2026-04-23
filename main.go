@@ -50,7 +50,7 @@ func createLicense(w http.ResponseWriter, r *http.Request) {
 	l.DBName = GenerateDBName(l.Code)
 	l.Active = true
 
-	_, err := db.Exec(
+	_, err := GetDB().Exec(
 		"INSERT INTO licenses (code, start_at, end_at, period, active, db_name) VALUES ($1,$2,$3,$4,$5,$6)",
 		l.Code, l.StartAt, l.EndAt, l.Period, l.Active, l.DBName,
 	)
@@ -60,7 +60,7 @@ func createLicense(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 🔥 DB create (template1 kullanıyoruz basitlik için)
-	_, err = db.Exec(fmt.Sprintf("CREATE DATABASE %s TEMPLATE template1", l.DBName))
+	_, err = GetDB().Exec(fmt.Sprintf("CREATE DATABASE %s TEMPLATE template1", l.DBName))
 	if err != nil {
 		log.Println("db create error:", err)
 	}
@@ -72,7 +72,7 @@ func getLicense(w http.ResponseWriter, r *http.Request) {
 	code := r.URL.Query().Get("code")
 
 	var l License
-	err := db.QueryRow(
+	err := GetDB().QueryRow(
 		"SELECT code, start_at, end_at, period, active, db_name FROM licenses WHERE code=$1",
 		code,
 	).Scan(&l.Code, &l.StartAt, &l.EndAt, &l.Period, &l.Active, &l.DBName)

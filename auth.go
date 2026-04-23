@@ -41,7 +41,7 @@ func register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = db.Exec("INSERT INTO users (username, password_hash) VALUES ($1, $2)", u.Username, string(hash))
+	_, err = GetDB().Exec("INSERT INTO users (username, password_hash) VALUES ($1, $2)", u.Username, string(hash))
 	if err != nil {
 		http.Error(w, "User creation failed: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -59,7 +59,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var u User
-	err := db.QueryRow("SELECT id, username, password_hash FROM users WHERE username = $1", credentials.Username).
+	err := GetDB().QueryRow("SELECT id, username, password_hash FROM users WHERE username = $1", credentials.Username).
 		Scan(&u.ID, &u.Username, &u.PasswordHash)
 	if err != nil {
 		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
@@ -75,7 +75,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 	sessionID := generateSessionID()
 	expiresAt := time.Now().Add(24 * time.Hour)
 
-	_, err = db.Exec("INSERT INTO sessions (id, user_id, expires_at) VALUES ($1, $2, $3)", sessionID, u.ID, expiresAt)
+	_, err = GetDB().Exec("INSERT INTO sessions (id, user_id, expires_at) VALUES ($1, $2, $3)", sessionID, u.ID, expiresAt)
 	if err != nil {
 		http.Error(w, "Session creation failed", http.StatusInternalServerError)
 		return
@@ -142,7 +142,7 @@ func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 
 		// Check session in DB
 		var exists bool
-		err = db.QueryRow("SELECT EXISTS(SELECT 1 FROM sessions WHERE id = $1 AND expires_at > $2)", sessionID, time.Now()).Scan(&exists)
+		err = GetDB().QueryRow("SELECT EXISTS(SELECT 1 FROM sessions WHERE id = $1 AND expires_at > $2)", sessionID, time.Now()).Scan(&exists)
 		if err != nil || !exists {
 			http.Error(w, "Invalid or expired session", http.StatusUnauthorized)
 			return
